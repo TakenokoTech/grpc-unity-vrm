@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package sample;
+
+service SampleService {
+  rpc Transform(SampleRequest) returns (SampleResponse) {}
+  rpc Stream(stream SampleRequest) returns (stream SampleResponse) {}
+}
+
+message SampleRequest {
+  string message = 1;
+}
+
+message SampleResponse {
+  string message = 1;
+}
