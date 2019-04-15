@@ -1,6 +1,5 @@
 ﻿using Grpc.Core;
 using Sample;
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -16,7 +15,6 @@ namespace grpc {
 
         private readonly Channel channel;
         private readonly SampleServiceClient client;
-        private int count = 0;
 
         GrpcSender() {
             this.channel = new Channel(ip + ":" + port, ChannelCredentials.Insecure);
@@ -24,14 +22,13 @@ namespace grpc {
         }
 
         // Start is called before the first frame update
-        void Start() {
+        async void Start() {
             text = "wait reply...";
-            // Transform();
-            // ReciveStream();
+            // await ReciveStreamAsync();
         }
 
         void Update() {
-            SendStream();
+            Transform();
         }
 
         private void OnDestroy() {
@@ -45,38 +42,22 @@ namespace grpc {
             text = "reply: " + reply.Message;
         }
 
-        private void SendStream() {
-            Task nowait = Task.Run(async () => {
-                using (var call = client.Stream()) {
-                    try {
-                        await call.RequestStream.WriteAsync(new SampleRequest { Message = "message" + count++ });
+        private async Task ReciveStreamAsync() {
+            using (var call = client.Stream()) {
+                Task nowait = Task.Run(async () => {
+                    while (await call.ResponseStream.MoveNext(CancellationToken.None)) {
+                        // Debug.Log("recive: " + call.ResponseStream.Current.Message);
+                        text = "recive: " + call.ResponseStream.Current.Message;
                     }
-                    catch (Exception ex) {
-                        Debug.Log(ex);
-                    }
-                }
-            });
-        }
+                });
 
-        private void ReciveStream() {
-            Task nowait = Task.Run(async () => {
-                using (var call = client.Stream()) {
-                    try {
-                        Debug.Log("recive");
-                        CancellationTokenSource tokenSource = new CancellationTokenSource();
-                        CancellationToken token = tokenSource.Token;
-                        await call.ResponseStream.MoveNext(token);
-                        Debug.Log("recive: " + call.ResponseStream.Current);
-                        //CancellationToken token = new CancellationToken();
-                        //while (await call.ResponseStream.MoveNext(token).ConfigureAwait(true)) {
-                        //    Debug.Log("recive: " + call.ResponseStream.Current);
-                        //}
-                    }
-                    catch (Exception ex) {
-                        Debug.Log(ex);
-                    }
+                for (int i = 1; i <= 100000; i++) {
+                    if (i > 10000) i = 0;
+                    var req = new SampleRequest { Message = "TestContent: " + i };
+                    await call.RequestStream.WriteAsync(req);
                 }
-            });
+                await call.RequestStream.CompleteAsync();
+            }
         }
     }
 }
