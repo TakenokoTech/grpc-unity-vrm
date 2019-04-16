@@ -11,53 +11,54 @@ namespace grpc {
 
         public string ip = "127.0.0.1";
         public string port = "9999";
-        public string text;
+        public string text = "wait reply...";
 
-        private readonly Channel channel;
         private readonly SampleServiceClient client;
+        private AsyncDuplexStreamingCall<SampleRequest, SampleResponse> stream;
 
         GrpcSender() {
-            this.channel = new Channel(ip + ":" + port, ChannelCredentials.Insecure);
-            this.client = new SampleServiceClient(channel);
+            Channel channel = new Channel(ip + ":" + port, ChannelCredentials.Insecure);
+            client = new SampleServiceClient(channel);
         }
 
         // Start is called before the first frame update
-        async void Start() {
-            text = "wait reply...";
-            // await ReciveStreamAsync();
+        void Start() {
+            stream = client.Stream();
+            ReciveStream();
         }
 
         void Update() {
-            Transform();
+            //Transform();
+            SendStream();
         }
 
-        private void OnDestroy() {
+        void OnDestroy() {
             Debug.Log("OnDestroy");
-            this.channel.ShutdownAsync().Wait();
+            stream.Dispose();
         }
 
         private void Transform() {
-            var reply = client.Transform(new SampleRequest { Message = "aaaa" });
-            Debug.Log("reply: " + reply.Message);
-            text = "reply: " + reply.Message;
+            Task.Run(() => {
+                var reply = client.Transform(new SampleRequest { Message = "aaaa" });
+                Debug.Log("reply: " + reply.Message);
+                text = "reply: " + reply.Message;
+            });
         }
 
-        private async Task ReciveStreamAsync() {
-            using (var call = client.Stream()) {
-                Task nowait = Task.Run(async () => {
-                    while (await call.ResponseStream.MoveNext(CancellationToken.None)) {
-                        // Debug.Log("recive: " + call.ResponseStream.Current.Message);
-                        text = "recive: " + call.ResponseStream.Current.Message;
-                    }
-                });
-
-                for (int i = 1; i <= 100000; i++) {
-                    if (i > 10000) i = 0;
-                    var req = new SampleRequest { Message = "TestContent: " + i };
-                    await call.RequestStream.WriteAsync(req);
+        private void ReciveStream() {
+            Task.Run(async () => {
+                while (await stream.ResponseStream.MoveNext(CancellationToken.None)) {
+                    Debug.Log("recive: " + stream.ResponseStream.Current.Message);
+                    text = "recive: " + stream.ResponseStream.Current.Message;
                 }
-                await call.RequestStream.CompleteAsync();
-            }
+            });
+        }
+
+        private void SendStream() {
+            Task.Run(async () => {
+                var req = new SampleRequest { Message = "TestContent" };
+                await stream.RequestStream.WriteAsync(req);
+            });
         }
     }
 }
