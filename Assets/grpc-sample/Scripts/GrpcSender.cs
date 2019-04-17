@@ -13,6 +13,10 @@ namespace grpc {
         public string port = "9999";
         public string text = "wait reply...";
 
+        public VrmAnimationCreater vrmAnimationCreater;
+        private IGrpcSendable GrpcSendable { get { return vrmAnimationCreater as IGrpcSendable; } }
+        public VrmAnimationCreater[] attachAnime;
+
         private readonly SampleServiceClient client;
         private AsyncDuplexStreamingCall<SampleRequest, SampleResponse> stream;
 
@@ -28,8 +32,8 @@ namespace grpc {
         }
 
         void Update() {
-            //Transform();
-            SendStream();
+            Transform();
+            //SendStream();
         }
 
         void OnDestroy() {
@@ -39,26 +43,32 @@ namespace grpc {
 
         private void Transform() {
             Task.Run(() => {
-                var reply = client.Transform(new SampleRequest { Message = "aaaa" });
-                Debug.Log("reply: " + reply.Message);
-                text = "reply: " + reply.Message;
+                var reply = client.Transform(new SampleRequest { Message = GrpcSendable.GetAnime().Stringify() });
+                // Debug.Log("reply: " + reply.Message);
+                var a = GrpcSendable.GetAnime().ToJson(reply.Message);
+                foreach (var ani in attachAnime) ani.SetAnime(a);
             });
         }
 
         private void ReciveStream() {
             Task.Run(async () => {
                 while (await stream.ResponseStream.MoveNext(CancellationToken.None)) {
-                    Debug.Log("recive: " + stream.ResponseStream.Current.Message);
-                    text = "recive: " + stream.ResponseStream.Current.Message;
+                    // Debug.Log("recive: " + stream.ResponseStream.Current.Message);
+                    text = stream.ResponseStream.Current.Message;
                 }
             });
         }
 
         private void SendStream() {
             Task.Run(async () => {
-                var req = new SampleRequest { Message = "TestContent" };
+                var req = new SampleRequest { Message = TimeUttil.NowTime() };
                 await stream.RequestStream.WriteAsync(req);
             });
         }
+    }
+
+    public interface IGrpcSendable {
+        VrmAnimationJson GetAnime();
+        void SetAnime(VrmAnimationJson anime);
     }
 }
