@@ -28,12 +28,12 @@ namespace grpc {
         // Start is called before the first frame update
         void Start() {
             stream = client.Stream();
-            ReciveStream();
+            // ReciveStream();
         }
 
         void Update() {
             Transform();
-            //SendStream();
+            // SendStream();
         }
 
         void OnDestroy() {
@@ -53,8 +53,10 @@ namespace grpc {
         private void ReciveStream() {
             Task.Run(async () => {
                 while (await stream.ResponseStream.MoveNext(CancellationToken.None)) {
-                    // Debug.Log("recive: " + stream.ResponseStream.Current.Message);
+                    Debug.Log("recive: " + stream.ResponseStream.Current.Message);
                     text = stream.ResponseStream.Current.Message;
+                    var a = GrpcSendable.GetAnime().ToJson(stream.ResponseStream.Current.Message);
+                    foreach (var ani in attachAnime) ani.SetAnime(a);
                 }
             });
         }

@@ -8,6 +8,7 @@ using UnityEngine;
 public class VrmAnimationJson {
 
     public List<VrmAnimation> vrmAnimation = new List<VrmAnimation>();
+    public float[] rootPosition = new float[] { 0, 0, 0 };
 
     [Serializable]
     public class VrmAnimation {
